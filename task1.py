@@ -1,0 +1,52 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
+# Step 1: Load dataset
+df = pd.read_csv(r"C:\Users\hp\Documents\Titanic-Dataset.csv")  
+
+# Step 2: Handle missing values (numeric only)
+numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+for col in numeric_cols:
+    df[col] = df[col].fillna(df[col].mean())
+
+# Step 3: Encode categorical variables
+categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+le = LabelEncoder()
+for col in categorical_cols:
+    df[col] = le.fit_transform(df[col].astype(str))  
+
+# Step 4: Standardize numeric features
+scaler = StandardScaler()
+df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+
+# Step 5a: Visualize outliers with boxplots 
+cols = 3
+rows = (len(numeric_cols) + cols - 1) // cols
+fig, axes = plt.subplots(rows, cols, figsize=(12, 4 * rows))
+axes = axes.flatten()
+
+for i, col in enumerate(numeric_cols):
+    sns.boxplot(x=df[col], ax=axes[i], color='skyblue')
+    axes[i].set_title(f'{col}', fontsize=10)
+    axes[i].tick_params(axis='x', labelsize=8)
+    axes[i].set_xticklabels([])
+
+for j in range(i + 1, len(axes)):
+    axes[j].set_visible(False)
+
+plt.tight_layout(h_pad=2.0, w_pad=1.5)
+plt.show()
+
+# Step 5b: Remove outliers using IQR method
+Q1 = df[numeric_cols].quantile(0.25)
+Q3 = df[numeric_cols].quantile(0.75)
+IQR = Q3 - Q1
+mask = ~((df[numeric_cols] < (Q1 - 1.5 * IQR)) | (df[numeric_cols] > (Q3 + 1.5 * IQR))).any(axis=1)
+df_clean = df[mask]
+
+df_clean.to_csv("cleaned_dataset.csv", index=False)
+
+print("Data cleaning completed. Final shape:", df_clean.shape)
